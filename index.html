@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#142b45">
+<title>DisasterAI</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f3f6fa;
+    color: #142b45;
+    margin: 0;
+}
+header {
+    background: #142b45;
+    color: white;
+    padding: 24px;
+    text-align: center;
+}
+main {
+    max-width: 850px;
+    margin: 25px auto;
+    padding: 15px;
+}
+section {
+    background: white;
+    padding: 22px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+}
+button, select, textarea, input {
+    padding: 11px;
+    margin: 6px 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+button {
+    background: #176b9a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+textarea {
+    width: 100%;
+    min-height: 90px;
+}
+pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+}
+#status {
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>DisasterAI</h1>
+    <p>Prepared Today. Protected Tomorrow.</p>
+    <p id="status"></p>
+</header>
+
+<main>
+
+<section>
+    <h2>AI Disaster Assistant</h2>
+
+    <select id="language">
+        <option>English</option>
+        <option>Telugu</option>
+        <option>Hindi</option>
+    </select>
+
+    <select id="disaster">
+        <option value="flood">Flood</option>
+        <option value="earthquake">Earthquake</option>
+        <option value="cyclone">Cyclone</option>
+        <option value="landslide">Landslide</option>
+        <option value="wildfire">Wildfire</option>
+    </select>
+
+    <textarea id="question"
+        placeholder="Ask DisasterAI a question..."></textarea>
+
+    <button onclick="askAI()">Ask DisasterAI</button>
+
+    <pre id="answer" aria-live="polite"></pre>
+</section>
+
+<section>
+    <h2>Personalized Preparedness Plan</h2>
+
+    <label for="members">Household members:</label>
+    <input id="members" type="number" min="1" max="30" value="4">
+
+    <button onclick="generatePlan()">Generate Plan</button>
+    <button onclick="showSavedPlan()">View Saved Plan</button>
+
+    <pre id="plan"></pre>
+</section>
+
+<section>
+    <h2>Offline Emergency Resources</h2>
+
+    <select id="offlineDisaster">
+        <option value="flood">Flood</option>
+        <option value="earthquake">Earthquake</option>
+        <option value="cyclone">Cyclone</option>
+        <option value="landslide">Landslide</option>
+        <option value="wildfire">Wildfire</option>
+    </select>
+
+    <button onclick="showOfflineGuide()">View Safety Guide</button>
+    <pre id="guide"></pre>
+</section>
+
+<section>
+    <h2>Emergency Kit Checklist</h2>
+    <div id="checklist"></div>
+</section>
+
+<p>
+    General preparedness information only.
+    Follow official authorities during actual emergencies.
+</p>
+
+</main>
+
+<script>
+const disasterGuides = {
+    flood: [
+        "Monitor official flood warnings.",
+        "Prepare essential supplies.",
+        "Never enter or drive through floodwater.",
+        "Follow official evacuation instructions."
+    ],
+    earthquake: [
+        "Secure heavy furniture beforehand.",
+        "Drop, Cover, and Hold On during shaking.",
+        "Stay away from windows.",
+        "Expect aftershocks."
+    ],
+    cyclone: [
+        "Monitor official cyclone warnings.",
+        "Secure loose outdoor objects.",
+        "Stay inside a secure shelter.",
+        "Wait for official clearance."
+    ],
+    landslide: [
+        "Monitor rainfall and landslide warnings.",
+        "Know official evacuation arrangements.",
+        "Avoid unstable slopes.",
+        "Stay away from affected areas."
+    ],
+    wildfire: [
+        "Monitor official wildfire advisories.",
+        "Prepare emergency supplies.",
+        "Follow evacuation orders.",
+        "Avoid smoke exposure where possible."
+    ]
+};
+
+const kit = [
+    "Drinking water",
+    "Non-perishable food",
+    "First aid kit",
+    "Flashlight",
+    "Spare batteries",
+    "Power bank",
+    "Essential medicines",
+    "Important documents",
+    "Emergency contacts",
+    "Emergency radio"
+];
+
+function updateStatus() {
+    document.getElementById("status").textContent =
+        navigator.onLine
+        ? "Online Mode"
+        : "Offline Emergency Mode";
+}
+
+window.addEventListener("online", updateStatus);
+window.addEventListener("offline", updateStatus);
+updateStatus();
+
+async function askAI() {
+    const output = document.getElementById("answer");
+
+    if (!navigator.onLine) {
+        output.textContent =
+            "Offline: OpenAI requires internet access. " +
+            "Please use the offline emergency resources.";
+        return;
+    }
+
+    output.textContent = "Generating response...";
+
+    try {
+        const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                message: document.getElementById("question").value,
+                language: document.getElementById("language").value,
+                disaster_type: document.getElementById("disaster").value
+            })
+        });
+
+        if (!response.ok) throw new Error("AI unavailable");
+
+        const data = await response.json();
+        output.textContent = data.response;
+
+    } catch (error) {
+        output.textContent =
+            "Unable to connect to DisasterAI. " +
+            "Use the offline preparedness guides.";
+    }
+}
+
+async function generatePlan() {
+    const output = document.getElementById("plan");
+
+    if (!navigator.onLine) {
+        showSavedPlan();
+        return;
+    }
+
+    output.textContent = "Generating your plan...";
+
+    try {
+        const response = await fetch("/api/plan", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                disaster_type: document.getElementById("disaster").value,
+                family_members: Number(
+                    document.getElementById("members").value
+                ),
+                language: document.getElementById("language").value
+            })
+        });
+
+        if (!response.ok) throw new Error("Plan unavailable");
+
+        const data = await response.json();
+
+        localStorage.setItem("savedPlan", data.plan);
+        output.textContent = data.plan;
+
+    } catch (error) {
+        showSavedPlan();
+    }
+}
+
+function showSavedPlan() {
+    document.getElementById("plan").textContent =
+        localStorage.getItem("savedPlan") ||
+        "No previously saved plan is available.";
+}
+
+function showOfflineGuide() {
+    const type = document.getElementById("offlineDisaster").value;
+    document.getElementById("guide").textContent =
+        disasterGuides[type].map((item, i) =>
+            `${i + 1}. ${item}`
+        ).join("\n");
+}
+
+function renderChecklist() {
+    const container = document.getElementById("checklist");
+
+    let saved = {};
+    try {
+        saved = JSON.parse(localStorage.getItem("kitProgress") || "{}");
+    } catch {
+        saved = {};
+    }
+
+    kit.forEach((item, index) => {
+        const label = document.createElement("label");
+        label.style.display = "block";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = Boolean(saved[index]);
+
+        checkbox.addEventListener("change", () => {
+            saved[index] = checkbox.checked;
+            localStorage.setItem(
+                "kitProgress",
+                JSON.stringify(saved)
+            );
+        });
+
+        label.append(checkbox, " " + item);
+        container.appendChild(label);
+    });
+}
+
+renderChecklist();
+
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js")
+            .catch(console.error);
+    });
+}
+</script>
+
+</body>
+</html>
